@@ -1,0 +1,31 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreateProductImagesTable extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('product_images', function (Blueprint $table) {
+            $table->id();
+            // Chắc chắn cùng kiểu với products.id
+            $table->unsignedBigInteger('product_id'); 
+            $table->string('image_path');
+            $table->boolean('is_primary')->default(false);
+            $table->timestamps();
+
+            // Foreign key an toàn
+            $table->foreign('product_id')
+                  ->references('id')
+                  ->on('products')
+                  ->onDelete('cascade');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('product_images');
+    }
+}
