@@ -2,29 +2,23 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
 {
-    use HasFactory;
-
+    // 1. Phải thêm các cột mới vào $fillable thì Laravel mới cho phép lưu
     protected $fillable = [
-        'user_id', 'total_amount', 'status', 'payment_id', 'address',
+        'user_id', 
+        'total_price', 
+        'status', 
+        'phone', 
+        'address', 
+        'payment_method'
     ];
 
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
+    // 2. Định nghĩa quan hệ để lệnh $order->items() trong Controller hoạt động
     public function items()
     {
         return $this->hasMany(OrderItem::class);
-    }
-
-    public function payment()
-    {
-        return $this->belongsTo(Payment::class);
     }
 }

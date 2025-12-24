@@ -9,12 +9,18 @@ class ARModel extends Model
 {
     use HasFactory;
 
+    // Chỉ định bảng nếu tên bảng không theo chuẩn số nhiều của Laravel
+    protected $table = 'ar_models';
+
     protected $fillable = [
-        'name', 'file_path', 'thumbnail_path', 'description',
+        'product_id', 
+        'name', 
+        'model_path'
     ];
 
-    public function sessions()
+    // Quan hệ ngược: Mô hình AR này thuộc về sản phẩm nào
+    public function product()
     {
-        return $this->hasMany(ARSession::class);
+        return $this->belongsTo(Product::class);
     }
 }

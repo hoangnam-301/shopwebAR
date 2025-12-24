@@ -10,13 +10,15 @@ use Spatie\Permission\Models\Role;
 
 class AuthController extends Controller
 {
-    // REGISTER
+    /**
+     * ĐĂNG KÝ TÀI KHOẢN MỚI
+     */
     public function register(Request $request)
     {
         $data = $request->validate([
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8|confirmed', // password_confirmation
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
         $user = User::create([
@@ -25,21 +27,29 @@ class AuthController extends Controller
             'password' => Hash::make($data['password']),
         ]);
 
-        // Gán role mặc định
+        // Gán role mặc định là user
         $role = Role::firstOrCreate(['name' => 'user']);
         $user->assignRole($role);
 
+        // Tạo token với khả năng (abilities) dựa trên tên role
         $token = $user->createToken('api-token', [$role->name])->plainTextToken;
 
         return response()->json([
             'message' => 'Register success',
             'token'   => $token,
             'role'    => $role->name,
-            'user'    => $user->only(['id', 'name', 'email']),
+            'user'    => [
+                'id'    => $user->id,
+                'name'  => $user->name,
+                'email' => $user->email,
+                'roles' => $user->roles // Trả về mảng roles để frontend nhận diện
+            ],
         ], 201);
     }
 
-    // LOGIN
+    /**
+     * ĐĂNG NHẬP
+     */
     public function login(Request $request)
     {
         $data = $request->validate([
@@ -50,36 +60,52 @@ class AuthController extends Controller
         $user = User::where('email', $data['email'])->first();
 
         if (!$user || !Hash::check($data['password'], $user->password)) {
-            return response()->json(['message' => 'Email hoặc mật khẩu sai'], 401);
+            return response()->json(['message' => 'Email hoặc mật khẩu không chính xác'], 401);
         }
 
-        // Xóa token cũ
+        // Xóa các token cũ để tránh rác database (Tùy chọn)
         $user->tokens()->delete();
 
-        $roleName = $user->roles->first()?->name ?? 'user';
+        // Lấy tên role đầu tiên của user, mặc định là user nếu chưa có
+        $roleName = $user->getRoleNames()->first() ?? 'user';
+        
+        // Tạo token mới
         $token = $user->createToken('api-token', [$roleName])->plainTextToken;
 
         return response()->json([
             'message' => 'Login success',
             'token'   => $token,
-            'role'    => $roleName,
-            'user'    => $user->only(['id', 'name', 'email'])
+            'role'    => $roleName, // Trả về chuỗi 'admin' hoặc 'user' trực tiếp
+            'user'    => [
+                'id'    => $user->id,
+                'name'  => $user->name,
+                'email' => $user->email,
+                'roles' => $user->roles // QUAN TRỌNG: Phải gửi mảng này về để Frontend kiểm tra
+            ]
         ]);
     }
 
-    // LOGOUT 1 TOKEN
+    /**
+     * ĐĂNG XUẤT (Xóa token hiện tại)
+     */
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
-
-        return response()->json(['message' => 'Logout success']);
+        if ($request->user()) {
+            $request->user()->currentAccessToken()->delete();
+            return response()->json(['message' => 'Logout success']);
+        }
+        return response()->json(['message' => 'Unauthorized'], 401);
     }
 
-    // LOGOUT ALL TOKENS
+    /**
+     * ĐĂNG XUẤT KHỎI TẤT CẢ THIẾT BỊ
+     */
     public function logoutAll(Request $request)
     {
-        $request->user()->tokens()->delete();
-
-        return response()->json(['message' => 'Logout all devices success']);
+        if ($request->user()) {
+            $request->user()->tokens()->delete();
+            return response()->json(['message' => 'Logout all devices success']);
+        }
+        return response()->json(['message' => 'Unauthorized'], 401);
     }
 }
